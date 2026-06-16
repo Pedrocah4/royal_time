@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Comando de Voz - Royal Time</title>
+</head>
+<body>
+    <h1>Reconhecimento de Voz - HUD Tático</h1>
+    <button id="btn-start">Iniciar Escuta</button>
+    <p>Status WebSocket: <span id="ws-status">Desconectado</span></p>
+    <p>Último Comando: <strong id="last-cmd">Nenhum</strong></p>
+
+    <script>
+        // Configuração do WebSocket
+        const ws = new WebSocket('ws://localhost:8765');
+        
+        ws.onopen = () => document.getElementById('ws-status').innerText = "Conectado!";
+        ws.onclose = () => document.getElementById('ws-status').innerText = "Desconectado!";
+
+        // Configuração do Web Speech API
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        
+        recognition.lang = 'pt-BR';
+        recognition.continuous = true; // Continua escutando sem parar
+        recognition.interimResults = false; // Aguarda a frase terminar naturalmente para maior precisão
+
+        recognition.onresult = (event) => { 
+            // Pega a última frase falada
+            const current = event.resultIndex;
+            const transcript = event.results[current][0].transcript.trim().toLowerCase();
+            
+            if (ws.readyState === WebSocket.OPEN && transcript !== "") {
+                ws.send(transcript);
+                document.getElementById('last-cmd').innerText = transcript + " ✅";
+            }
+        };
+
+        recognition.onerror = (event) => console.error("Erro no reconhecimento:", event.error);
+        
+        // Se parar de escutar sozinho, reinicia automaticamente para não perder comandos
+        recognition.onend = () => recognition.start();
+
+        // A aplicação aperta o botão automaticamente logo após carregar
+        window.addEventListener('load', () => {
+            document.getElementById('btn-start').click();
+        });
+
+        document.getElementById('btn-start').addEventListener('click', (event) => {
+            try { recognition.start(); } catch(e) {}
+            
+            // isTrusted verifica se foi um clique humano (true) ou de código (false)
+            if (event.isTrusted) {
+                document.getElementById('btn-start').innerText = "Escutando... (Humano)";
+            } else {
+                document.getElementById('btn-start').innerText = "Escutando... (Auto-Click)";
+            }
+        });
+    </script>
+</body>
+</html>
