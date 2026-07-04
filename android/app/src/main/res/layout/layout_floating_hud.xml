@@ -1,70 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root_hud"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:background="@drawable/hud_background"
-    android:gravity="center_vertical"
-    android:orientation="horizontal"
-    android:paddingLeft="16dp"
-    android:paddingTop="12dp"
-    android:paddingRight="16dp"
-    android:paddingBottom="12dp">
+    android:layout_width="130dp"
+    android:layout_height="130dp">
 
-    <!-- Indicador de Elixir Grande -->
-    <TextView
-        android:id="@+id/txt_elixir"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="💧 5"
-        android:textColor="#FFFFFF"
-        android:textSize="28sp"
-        android:textStyle="bold" />
+    <!-- Círculo Customizado do Contador de Elixir -->
+    <com.example.royaltime.ElixirCircleView
+        android:id="@+id/elixir_circle_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
-    <!-- Linha divisória vertical -->
-    <View
-        android:layout_width="1.5dp"
-        android:layout_height="40dp"
-        android:layout_marginLeft="12dp"
-        android:layout_marginRight="12dp"
-        android:background="#40FFFFFF" />
-
-    <!-- Textos de Status e Histórico -->
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical">
-
-        <TextView
-            android:id="@+id/txt_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="1x | Aguardando..."
-            android:textColor="#B0FFFFFF"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/txt_history"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="Fale um comando para iniciar"
-            android:textColor="#DDA0DD"
-            android:textSize="11sp" />
-    </LinearLayout>
-
-    <!-- Botão de Fechar Rápido -->
+    <!-- Botão de Fechar Redondo no Canto Superior Direito -->
     <TextView
         android:id="@+id/btn_close"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="16dp"
-        android:padding="4dp"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/close_button_background"
+        android:gravity="center"
         android:text="✕"
-        android:textColor="#FF6347"
-        android:textSize="16sp"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
         android:textStyle="bold" />
 
-</LinearLayout>
+</FrameLayout>
