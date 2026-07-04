@@ -71,7 +71,7 @@ class ElixirHudService : Service() {
         // 1. Inflar a View do HUD
         floatingView = LayoutInflater.from(this).inflate(R.layout.layout_floating_hud, null)
 
-        // 2. Definir Parâmetros da Janela de Sobreposição
+        // 2. Definir Parâmetros da Janela de Sobreposição (Tamanho de Ícone de App = 75dp)
         val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         } else {
@@ -79,9 +79,12 @@ class ElixirHudService : Service() {
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
+        val density = resources.displayMetrics.density
+        val sizeInPx = (75 * density).toInt() // 75dp convertido para pixels
+
         params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            sizeInPx,
+            sizeInPx,
             layoutType,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT
