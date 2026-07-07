@@ -30,9 +30,11 @@ class MainActivity : ComponentActivity() {
 
     private val REQUEST_RECORD_AUDIO_PERMISSION = 200
     private val REQUEST_OVERLAY_PERMISSION = 201
+    private val REQUEST_NOTIFICATION_PERMISSION = 202
 
     private var hasAudioPermission by mutableStateOf(false)
     private var hasOverlayPermission by mutableStateOf(false)
+    private var hasNotificationPermission by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,6 +65,15 @@ class MainActivity : ComponentActivity() {
         ) == PackageManager.PERMISSION_GRANTED
 
         hasOverlayPermission = Settings.canDrawOverlays(this)
+
+        hasNotificationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
     }
 
     private fun requestAudioPermission() {
@@ -81,13 +92,23 @@ class MainActivity : ComponentActivity() {
         startActivityForResult(intent, REQUEST_OVERLAY_PERMISSION)
     }
 
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                REQUEST_NOTIFICATION_PERMISSION
+            )
+        }
+    }
+
     private fun startHudService() {
-        if (!hasAudioPermission || !hasOverlayPermission) {
+        if (!hasAudioPermission || !hasOverlayPermission || !hasNotificationPermission) {
             Toast.makeText(this, "Por favor, conceda todas as permissões primeiro!", Toast.LENGTH_SHORT).show()
             return
         }
         val intent = Intent(this, ElixirHudService::class.java)
-        startService(intent)
+        ContextCompat.startForegroundService(this, intent)
         Toast.makeText(this, "HUD iniciado com sucesso!", Toast.LENGTH_SHORT).show()
     }
 
@@ -183,6 +204,33 @@ class MainActivity : ComponentActivity() {
                         } else {
                             Button(onClick = { requestOverlayPermission() }) {
                                 Text("Permitir")
+                            }
+                        }
+                    }
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        HorizontalDivider()
+
+                        // Notification Permission Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = "Notificações", fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    text = "Necessário para manter o serviço ativo",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                )
+                            }
+                            if (hasNotificationPermission) {
+                                Text("✅", fontSize = 20.sp)
+                            } else {
+                                Button(onClick = { requestNotificationPermission() }) {
+                                    Text("Permitir")
+                                }
                             }
                         }
                     }

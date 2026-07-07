@@ -1,8 +1,11 @@
 package com.example.royaltime
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Handler
@@ -14,8 +17,11 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.core.app.NotificationCompat
 
 class ElixirHudService : Service() {
+
+    private val NOTIFICATION_ID = 1001
 
     private var windowManager: WindowManager? = null
     private var floatingView: View? = null
@@ -68,6 +74,9 @@ class ElixirHudService : Service() {
     override fun onCreate() {
         super.onCreate()
 
+        // 0. Iniciar como Foreground Service
+        startForegroundService()
+
         // 1. Inflar a View do HUD
         floatingView = LayoutInflater.from(this).inflate(R.layout.layout_floating_hud, null)
 
@@ -117,6 +126,32 @@ class ElixirHudService : Service() {
         handler.post(elixirRunnable)
     }
 
+    private fun startForegroundService() {
+        val channelId = "elixir_hud_service_channel"
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "Royal Time HUD Service",
+                NotificationManager.IMPORTANCE_LOW
+            )
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
+        }
+
+        val notification = NotificationCompat.Builder(this, channelId)
+            .setContentTitle("Royal Time Ativo")
+            .setContentText("O HUD de Elixir está rodando em segundo plano.")
+            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+            .setOngoing(true)
+            .build()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
+    }
+
     private fun setupDragTouch() {
         floatingView?.setOnTouchListener(object : View.OnTouchListener {
             private var initialX = 0
@@ -163,6 +198,7 @@ class ElixirHudService : Service() {
                 lastElixirTime = System.currentTimeMillis()
                 progressVal = 0f
                 updateUi()
+                elixirCircleView?.triggerPulse()
             }
             is VoiceCommand.AlterarMultiplicador -> {
                 if (!isGameStarted) return
@@ -178,6 +214,7 @@ class ElixirHudService : Service() {
                 lastElixirTime = now - (currentInterval * progressPercentage).toLong()
                 
                 updateUi()
+                elixirCircleView?.triggerPulse()
             }
             is VoiceCommand.GastarElixir -> {
                 if (!isGameStarted) return
@@ -186,6 +223,7 @@ class ElixirHudService : Service() {
                     elixirCurrent -= cost
                 }
                 updateUi()
+                elixirCircleView?.triggerPulse()
             }
         }
     }
