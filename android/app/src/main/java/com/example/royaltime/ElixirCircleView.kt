@@ -135,10 +135,18 @@ class ElixirCircleView @JvmOverloads constructor(
             canvas.scale(pulseScale, pulseScale, cx, cy)
         }
 
-        // 1. Outer Glow (Brilho Externo Roxo Translúcido)
+        // 1. Outer Glow (Brilho Externo Roxo Translúcido com efeito "breathe" no elixir 10)
         ringPaint.style = Paint.Style.STROKE
+        val timeMs = System.currentTimeMillis()
+        val glowPulse = if (elixirCurrent >= 10) {
+            0.6f + 0.4f * kotlin.math.sin(timeMs / 150.0).toFloat() // Oscila suavemente entre 0.6 e 1.0
+        } else {
+            1.0f
+        }
         for (i in 0..6) {
-            ringPaint.color = Color.argb((18 - i * 2.5).toInt().coerceAtLeast(0), 138, 43, 226)
+            val baseAlpha = (18 - i * 2.5).toInt().coerceAtLeast(0)
+            val alpha = (baseAlpha * glowPulse).toInt().coerceIn(0, 255)
+            ringPaint.color = Color.argb(alpha, 138, 43, 226)
             ringPaint.strokeWidth = progressStrokeWidth + i * 4f
             canvas.drawCircle(cx, cy, ringRadius, ringPaint)
         }

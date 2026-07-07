@@ -30,6 +30,7 @@ class VoiceInputManager(
 
     private val handler = Handler(Looper.getMainLooper())
     private val processedCommandsInSession = mutableSetOf<String>()
+    private val detectedOpponentCards = mutableSetOf<String>()
 
     private val cardCosts = mapOf(
         "gigante" to 5, "golem" to 8, "tronco" to 2, "corredor" to 4,
@@ -112,6 +113,8 @@ class VoiceInputManager(
             val key = "cmd_iniciar"
             if (!processedCommandsInSession.contains(key)) {
                 processedCommandsInSession.add(key)
+                detectedOpponentCards.clear() // Reinicia o deck aprendido para a nova partida
+                Log.d(TAG, "Novo jogo iniciado: deck do oponente resetado.")
                 onCommandReceived(VoiceCommand.Iniciar)
             }
         }
@@ -141,8 +144,20 @@ class VoiceInputManager(
         val sortedCards = cardCosts.keys.sortedByDescending { it.length }
         for (card in sortedCards) {
             if (tempText.contains(card)) {
+                // Se o deck já está completo (8 cartas), só aceita se a carta já pertence ao deck aprendido
+                if (detectedOpponentCards.size >= 8 && !detectedOpponentCards.contains(card)) {
+                    continue
+                }
+
                 if (!processedCommandsInSession.contains(card)) {
                     processedCommandsInSession.add(card)
+                    
+                    // Adiciona ao deck aprendido do adversário se houver espaço
+                    if (detectedOpponentCards.size < 8 && !detectedOpponentCards.contains(card)) {
+                        detectedOpponentCards.add(card)
+                        Log.d(TAG, "Carta aprendida no deck do oponente: $card. Total: ${detectedOpponentCards.size}/8")
+                    }
+
                     val cost = cardCosts[card] ?: 0
                     val formattedName = card.substring(0, 1).uppercase(Locale.ROOT) + card.substring(1)
                     onCommandReceived(VoiceCommand.GastarElixir(cost, formattedName))

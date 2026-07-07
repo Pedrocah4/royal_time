@@ -57,8 +57,9 @@ class ElixirHudService : Service() {
                         progressVal = elapsed.toFloat() / currentInterval
                     }
                 } else {
-                    // Mantém zerado/vazio se atingir o máximo (10)
+                    // Mantém zerado/vazio se atingir o máximo (10) e reseta o tempo de recarga
                     progressVal = 0f
+                    lastElixirTime = System.currentTimeMillis()
                 }
                 updateUi()
             } else {
