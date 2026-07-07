@@ -13,7 +13,6 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.widget.TextView
 import android.widget.Toast
 
 class ElixirHudService : Service() {
@@ -22,16 +21,14 @@ class ElixirHudService : Service() {
     private var floatingView: View? = null
     private var params: WindowManager.LayoutParams? = null
 
-    private var txtElixir: TextView? = null
-    private var txtStatus: TextView? = null
-    private var txtHistory: TextView? = null
+    private var elixirCircleView: ElixirCircleView? = null
     private var btnClose: View? = null
 
     private var voiceInputManager: VoiceInputManager? = null
 
     // Lógica de Elixir
     private var elixirCurrent = 5
-    private var multiplierText = "1x"
+    private var progressVal = 0f
     private var multiplierVal = 1.0f
     private var isGameStarted = false
     
@@ -42,15 +39,27 @@ class ElixirHudService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private val elixirRunnable = object : Runnable {
         override fun run() {
-            if (isGameStarted && elixirCurrent < 10) {
-                val now = System.currentTimeMillis()
-                if (now - lastElixirTime >= currentInterval) {
-                    elixirCurrent++
-                    lastElixirTime = now
-                    updateUi()
+            if (isGameStarted) {
+                if (elixirCurrent < 10) {
+                    val now = System.currentTimeMillis()
+                    val elapsed = now - lastElixirTime
+                    if (elapsed >= currentInterval) {
+                        elixirCurrent++
+                        lastElixirTime = now
+                        progressVal = 0f
+                    } else {
+                        progressVal = elapsed.toFloat() / currentInterval
+                    }
+                } else {
+                    // Mantém zerado/vazio se atingir o máximo (10)
+                    progressVal = 0f
                 }
+                updateUi()
+            } else {
+                progressVal = 0f
+                updateUi()
             }
-            handler.postDelayed(this, 100)
+            handler.postDelayed(this, 16) // ~60fps (ciclo de ~16.6ms)
         }
     }
 
@@ -62,7 +71,7 @@ class ElixirHudService : Service() {
         // 1. Inflar a View do HUD
         floatingView = LayoutInflater.from(this).inflate(R.layout.layout_floating_hud, null)
 
-        // 2. Definir Parâmetros da Janela de Sobreposição
+        // 2. Definir Parâmetros da Janela de Sobreposição (Tamanho de Ícone de App = 75dp)
         val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         } else {
@@ -70,9 +79,12 @@ class ElixirHudService : Service() {
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
+        val density = resources.displayMetrics.density
+        val sizeInPx = (75 * density).toInt() // 75dp convertido para pixels
+
         params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            sizeInPx,
+            sizeInPx,
             layoutType,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT
@@ -86,16 +98,14 @@ class ElixirHudService : Service() {
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         windowManager?.addView(floatingView, params)
 
-        // 4. Referenciar elementos do layout
-        txtElixir = floatingView?.findViewById(R.id.txt_elixir)
-        txtStatus = floatingView?.findViewById(R.id.txt_status)
-        txtHistory = floatingView?.findViewById(R.id.txt_history)
+        // 4. Mapear Views do novo layout
+        elixirCircleView = floatingView?.findViewById(R.id.elixir_circle_view)
         btnClose = floatingView?.findViewById(R.id.btn_close)
 
         // 5. Configurar arraste (drag)
         setupDragTouch()
 
-        // 6. Configurar clique de fechar
+        // 6. Configurar clique do botão fechar redondo
         btnClose?.setOnClickListener {
             stopSelf()
         }
@@ -103,7 +113,7 @@ class ElixirHudService : Service() {
         // 7. Configurar reconhecimento de voz
         setupVoiceInput()
 
-        // 8. Iniciar o Loop de Atualização do Elixir
+        // 8. Iniciar o Loop de Atualização do Elixir a 60 FPS
         handler.post(elixirRunnable)
     }
 
@@ -151,29 +161,29 @@ class ElixirHudService : Service() {
                 isGameStarted = true
                 elixirCurrent = 5
                 lastElixirTime = System.currentTimeMillis()
-                txtStatus?.text = "1x | Em Partida"
-                txtHistory?.text = "🎮 Partida Iniciada!"
+                progressVal = 0f
                 updateUi()
             }
             is VoiceCommand.AlterarMultiplicador -> {
                 if (!isGameStarted) return
-                multiplierText = command.texto
+                val now = System.currentTimeMillis()
+                val oldElapsed = now - lastElixirTime
+                val oldInterval = currentInterval
+
                 multiplierVal = command.multiplicador
                 currentInterval = (BASE_INTERVAL / multiplierVal).toLong()
-                lastElixirTime = System.currentTimeMillis()
-                txtStatus?.text = "$multiplierText | Em Partida"
-                txtHistory?.text = "⚡ Velocidade: $multiplierText"
+
+                // Projeta transição suave mantendo o percentual de preenchimento atual
+                val progressPercentage = oldElapsed.toFloat() / oldInterval
+                lastElixirTime = now - (currentInterval * progressPercentage).toLong()
+                
                 updateUi()
             }
             is VoiceCommand.GastarElixir -> {
                 if (!isGameStarted) return
                 val cost = command.quantidade
-                val detail = command.detalhe
                 if (elixirCurrent >= cost) {
                     elixirCurrent -= cost
-                    txtHistory?.text = "🎙️ $detail (-$cost)"
-                } else {
-                    txtHistory?.text = "⚠️ Sem elixir p/ $detail (-$cost)"
                 }
                 updateUi()
             }
@@ -181,7 +191,8 @@ class ElixirHudService : Service() {
     }
 
     private fun updateUi() {
-        txtElixir?.text = "💧 $elixirCurrent"
+        elixirCircleView?.elixirCurrent = elixirCurrent
+        elixirCircleView?.progress = progressVal
     }
 
     override fun onDestroy() {
